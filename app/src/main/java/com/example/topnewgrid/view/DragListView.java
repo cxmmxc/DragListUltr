@@ -11,11 +11,15 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.view.animation.Animation;
+import android.view.animation.TranslateAnimation;
 import android.widget.AdapterView;
 import android.widget.ImageView;
 import android.widget.ListView;
 
 import com.example.topnewgrid.R;
+import com.example.topnewgrid.adapter.DragAdapter;
+import com.example.topnewgrid.adapter.InterAdapter;
 
 /**
  * 作者：陈新明
@@ -58,6 +62,14 @@ public class DragListView extends ListView {
     int dragOffsetY;
     /** 拖动的时候放大的倍数 */
     private double dragScale = 1.2D;
+    /* 移动时候最后个动画的ID */
+    private String LastAnimationID;
+    /** 每个ITEM之间的竖直间距 */
+    private int mVerticalSpacing = 15;
+    /** */
+    private int holdPosition;
+    /** 是否在移动 */
+    private boolean isMoving = false;
     /** 震动器  */
     private Vibrator mVibrator;
     /** */
@@ -99,7 +111,121 @@ public class DragListView extends ListView {
 
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
+        //事件分发
+        if (dragImageView != null && dragPosition != AdapterView.INVALID_POSITION) {
+            int x = (int) ev.getX ();
+            int y = (int) ev.getY ();
+            switch (ev.getAction ()) {
+                case MotionEvent.ACTION_DOWN:
+                    downX = (int) ev.getX ();
+                    downY = (int) ev.getY ();
+                    windowX = (int) ev.getX ();
+                    windowY = (int) ev.getY ();
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    onDrag (x, y, (int) ev.getRawX (), (int) ev.getRawY ());
+                    if (!isMoving) {
+                        onMove (x, y);
+                    }
+                    if (pointToPosition (x, y) != AdapterView.INVALID_POSITION) {
+                        break;
+                    }
+                    break;
+            }
+        }
         return super.onTouchEvent(ev);
+    }
+
+    private void onMove (int x, int y) {
+        //获取手指移动的下面的position
+        int dPostion = pointToPosition (x, y);
+        if ((dPostion == -1) || (dPostion == dragPosition)) {
+            return;
+        }
+        dropPosition = dPostion;
+        if (dragPosition != startPosition) {
+            dragPosition = startPosition;
+        }
+        int movecount;
+        if ((dragPosition == startPosition) || (dragPosition != dropPosition)) {
+            movecount = dropPosition - dragPosition;
+        }else {
+            movecount = 0;
+        }
+        if (movecount == 0) {
+            return;
+        }
+
+        int movecount_abs = Math.abs (movecount);
+        if (dPostion != dragPosition) {
+            ViewGroup dragGroup = (ViewGroup) getChildAt (dragPosition);
+            dragGroup.setVisibility (ViewGroup.INVISIBLE);
+            //y_vlaue移动的距离百分比（相对于自己宽度的百分比）
+            float y_vlaue = ((float) mVerticalSpacing / (float) itemHeight) + 1.0f;
+            for (int i = 0; i < movecount_abs; i++) {
+                //x是无法移动的，移动的是y
+                float to_y = y_vlaue;
+                if (movecount > 0) {
+                    //往下拖动
+                    holdPosition = dragPosition + i + 1;
+                    to_y = (i + 1) * y_vlaue;
+                }else {
+                    holdPosition = dragPosition - i - 1;
+                    to_y = -(i + 1) * to_y;
+                }
+                ViewGroup moveViewGroup = (ViewGroup) getChildAt (holdPosition);
+                Animation moveAnimation = getMoveAnimation (0, to_y);
+                moveViewGroup.startAnimation (moveAnimation);
+                if (holdPosition == dropPosition) {
+                    //到最后一个position移动动画了
+                    LastAnimationID = moveAnimation.toString ();
+                }
+                moveAnimation.setAnimationListener (new Animation.AnimationListener () {
+                    @Override
+                    public void onAnimationStart (Animation animation) {
+                        isMoving = true;
+                    }
+
+                    @Override
+                    public void onAnimationEnd (Animation animation) {
+
+                    }
+
+                    @Override
+                    public void onAnimationRepeat (Animation animation) {
+                        if (animation.toString().equalsIgnoreCase(LastAnimationID)) {
+                            InterAdapter mDragAdapter = (InterAdapter) getAdapter();
+                            mDragAdapter.exchange(startPosition,dropPosition);
+                            startPosition = dropPosition;
+                            dragPosition = dropPosition;
+                            isMoving = false;
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+
+    /** 获取移动动画 */
+    public Animation getMoveAnimation(float toXValue, float toYValue) {
+        TranslateAnimation mTranslateAnimation = new TranslateAnimation(
+                Animation.RELATIVE_TO_SELF, 0.0F,
+                Animation.RELATIVE_TO_SELF,toXValue,
+                Animation.RELATIVE_TO_SELF, 0.0F,
+                Animation.RELATIVE_TO_SELF, toYValue);// 当前位置移动到指定位置
+        mTranslateAnimation.setFillAfter(true);// 设置一个动画效果执行完毕后，View对象保留在终止的位置。
+        mTranslateAnimation.setDuration(300L);
+        return mTranslateAnimation;
+    }
+
+    private void onDrag (int x, int y, int rawX, int rawY) {
+        if (dragImageView != null) {
+            windowParams.alpha = 0.6f;
+            windowParams.x = rawX - win_view_x;
+            windowParams.y = rawY - win_view_y;
+            windowManager.updateViewLayout (dragImageView, windowParams);
+        }
     }
 
     public void setOnItemClickListener(final MotionEvent ev) {
@@ -134,9 +260,9 @@ public class DragListView extends ListView {
                     Bitmap dragBitmap = Bitmap.createBitmap(dragViewGroup.getDrawingCache());
                     mVibrator.vibrate(50);//设置震动时间
                     startDrag(dragBitmap, (int)ev.getRawX(),  (int)ev.getRawY());
-//                    hideDropItem();
+                    hideDropItem();
                     dragViewGroup.setVisibility(View.INVISIBLE);
-//                    isMoving = false;
+                    isMoving = false;
                     return true;// 消费掉此事件，onTouchEvent接收
                 }
 
@@ -171,6 +297,11 @@ public class DragListView extends ListView {
         windowManager = (WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE);// "window"
         windowManager.addView(iv, windowParams);
         dragImageView = iv;
+    }
+
+    /** 隐藏 放下 的ITEM*/
+    private void hideDropItem() {
+        ((InterAdapter) getAdapter()).setShowDropItem(false);
     }
 
 

@@ -20,7 +20,9 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.example.topnewgrid.R;
+import com.example.topnewgrid.adapter.AbstraAdapter;
 import com.example.topnewgrid.adapter.DragAdapter;
+import com.example.topnewgrid.adapter.InterAdapter;
 import com.example.topnewgrid.tools.DataTools;
 
 /**
@@ -180,11 +182,11 @@ public class DragGrid extends GridView {
         int tempPostion = pointToPosition(x, y);
 //		if (tempPostion != AdapterView.INVALID_POSITION) {
         dropPosition = tempPostion;
-        DragAdapter mDragAdapter = (DragAdapter) getAdapter();
+        InterAdapter mDragAdapter = (InterAdapter) getAdapter();
         //显示刚拖动的ITEM
         mDragAdapter.setShowDropItem(true);
         //刷新适配器，让对应的ITEM显示
-        mDragAdapter.notifyDataSetChanged();
+        mDragAdapter.notifyData ();
 //		}
     }
     /**
@@ -296,7 +298,7 @@ public class DragGrid extends GridView {
 
     /** 隐藏 放下 的ITEM*/
     private void hideDropItem() {
-        ((DragAdapter) getAdapter()).setShowDropItem(false);
+        ((InterAdapter) getAdapter()).setShowDropItem(false);
     }
 
     /** 获取移动动画 */
@@ -407,7 +409,7 @@ public class DragGrid extends GridView {
                             // TODO Auto-generated method stub
                             // 如果为最后个动画结束，那执行下面的方法
                             if (animation.toString().equalsIgnoreCase(LastAnimationID)) {
-                                DragAdapter mDragAdapter = (DragAdapter) getAdapter();
+                                InterAdapter mDragAdapter = (InterAdapter) getAdapter();
                                 mDragAdapter.exchange(startPosition,dropPosition);
                                 startPosition = dropPosition;
                                 dragPosition = dropPosition;

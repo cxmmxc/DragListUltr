@@ -22,7 +22,7 @@ import java.util.List;
  * 描述：//TODO
  */
 
-public class DragAdapter extends BaseAdapter {
+public class DragAdapter extends BaseAdapter implements InterAdapter {
 
     /** TAG*/
     private final static String TAG = "DragAdapter";
@@ -152,5 +152,10 @@ public class DragAdapter extends BaseAdapter {
     /** 显示放下的ITEM */
     public void setShowDropItem(boolean show) {
         isItemShow = show;
+    }
+
+    @Override
+    public void notifyData () {
+        notifyDataSetChanged ();
     }
 }
