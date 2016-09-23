@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.PixelFormat;
 import android.os.Vibrator;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.DragEvent;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -30,6 +31,8 @@ import com.example.topnewgrid.adapter.InterAdapter;
 
 public class DragListView extends ListView {
 
+
+    private final String TAG = DragListView.this.getClass().getName();
 
     private boolean mIsEditStatus = false;//是否处于编辑状态，默认是false
     /** 点击时候的X位置 */
@@ -113,6 +116,8 @@ public class DragListView extends ListView {
     public boolean onTouchEvent(MotionEvent ev) {
         //事件分发
         if (dragImageView != null && dragPosition != AdapterView.INVALID_POSITION) {
+//            super.onTouchEvent(ev);
+            Log.w(TAG, "onTouchEvent");
             int x = (int) ev.getX ();
             int y = (int) ev.getY ();
             switch (ev.getAction ()) {
@@ -124,6 +129,7 @@ public class DragListView extends ListView {
                     break;
                 case MotionEvent.ACTION_MOVE:
                     onDrag (x, y, (int) ev.getRawX (), (int) ev.getRawY ());
+                    Log.i(TAG, "isMoving=" + isMoving);
                     if (!isMoving) {
                         onMove (x, y);
                     }
@@ -131,14 +137,36 @@ public class DragListView extends ListView {
                         break;
                     }
                     break;
+                case MotionEvent.ACTION_UP:
+                    stopDrag();
+                    onDrop(x, y);
+                    requestDisallowInterceptTouchEvent(false);
+                    break;
+                default:
+                    break;
             }
         }
         return super.onTouchEvent(ev);
     }
 
+    /** 在松手下放的情况 */
+    private void onDrop(int x, int y) {
+        // 根据拖动到的x,y坐标获取拖动位置下方的ITEM对应的POSTION
+        int tempPostion = pointToPosition(x, y);
+//		if (tempPostion != AdapterView.INVALID_POSITION) {
+        dropPosition = tempPostion;
+        InterAdapter mDragAdapter = (InterAdapter) getAdapter();
+        //显示刚拖动的ITEM
+        mDragAdapter.setShowDropItem(true);
+        //刷新适配器，让对应的ITEM显示
+        mDragAdapter.notifyData ();
+//		}
+    }
+
     private void onMove (int x, int y) {
         //获取手指移动的下面的position
         int dPostion = pointToPosition (x, y);
+        Log.v(TAG, "dPosition=" + dPostion);
         if ((dPostion == -1) || (dPostion == dragPosition)) {
             return;
         }
@@ -168,40 +196,47 @@ public class DragListView extends ListView {
                 if (movecount > 0) {
                     //往下拖动
                     holdPosition = dragPosition + i + 1;
-                    to_y = (i + 1) * y_vlaue;
+                    to_y = -(i + 1) * y_vlaue;
                 }else {
                     holdPosition = dragPosition - i - 1;
-                    to_y = -(i + 1) * to_y;
+                    to_y = (i + 1) * y_vlaue;
                 }
                 ViewGroup moveViewGroup = (ViewGroup) getChildAt (holdPosition);
-                Animation moveAnimation = getMoveAnimation (0, to_y);
-                moveViewGroup.startAnimation (moveAnimation);
-                if (holdPosition == dropPosition) {
-                    //到最后一个position移动动画了
-                    LastAnimationID = moveAnimation.toString ();
-                }
-                moveAnimation.setAnimationListener (new Animation.AnimationListener () {
-                    @Override
-                    public void onAnimationStart (Animation animation) {
-                        isMoving = true;
+                Log.e(TAG, "to_y==" + to_y);
+                if (!isMoving) {
+                    Animation moveAnimation = getMoveAnimation (0, to_y);
+                    moveViewGroup.startAnimation (moveAnimation);
+                    if (holdPosition == dropPosition) {
+                        //到最后一个position移动动画了
+                        LastAnimationID = moveAnimation.toString ();
                     }
-
-                    @Override
-                    public void onAnimationEnd (Animation animation) {
-
-                    }
-
-                    @Override
-                    public void onAnimationRepeat (Animation animation) {
-                        if (animation.toString().equalsIgnoreCase(LastAnimationID)) {
-                            InterAdapter mDragAdapter = (InterAdapter) getAdapter();
-                            mDragAdapter.exchange(startPosition,dropPosition);
-                            startPosition = dropPosition;
-                            dragPosition = dropPosition;
-                            isMoving = false;
+                    moveAnimation.setAnimationListener (new Animation.AnimationListener () {
+                        @Override
+                        public void onAnimationStart (Animation animation) {
+                            isMoving = true;
+                            Log.w(TAG, "animStart,isMoving = " + isMoving);
                         }
-                    }
-                });
+
+                        @Override
+                        public void onAnimationEnd (Animation animation) {
+                            if (animation.toString().equalsIgnoreCase(LastAnimationID)) {
+                                InterAdapter mDragAdapter = (InterAdapter) getAdapter();
+                                mDragAdapter.exchange(startPosition,dropPosition);
+                                startPosition = dropPosition;
+                                dragPosition = dropPosition;
+                                isMoving = false;
+                                Log.w(TAG, "animEnd,isMoving = " + isMoving);
+                            }
+                        }
+
+                        @Override
+                        public void onAnimationRepeat (Animation animation) {
+
+                        }
+                    });
+                }
+
+
             }
         }
     }
@@ -215,7 +250,7 @@ public class DragListView extends ListView {
                 Animation.RELATIVE_TO_SELF, 0.0F,
                 Animation.RELATIVE_TO_SELF, toYValue);// 当前位置移动到指定位置
         mTranslateAnimation.setFillAfter(true);// 设置一个动画效果执行完毕后，View对象保留在终止的位置。
-        mTranslateAnimation.setDuration(300L);
+        mTranslateAnimation.setDuration(350L);
         return mTranslateAnimation;
     }
 
@@ -232,6 +267,7 @@ public class DragListView extends ListView {
         setOnItemLongClickListener(new OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                Log.v(TAG, "dragList--setOnItemClickListener");
                 int x = (int) ev.getX();// 长安事件的X位置
                 int y = (int) ev.getY();// 长安事件的y位置
                 startPosition = position;// 第一次点击的postion
@@ -257,12 +293,14 @@ public class DragListView extends ListView {
                     dragItemView = dragViewGroup;
                     dragViewGroup.destroyDrawingCache();
                     dragViewGroup.setDrawingCacheEnabled(true);
+                    Log.w(TAG, "BitmapCreate");
                     Bitmap dragBitmap = Bitmap.createBitmap(dragViewGroup.getDrawingCache());
                     mVibrator.vibrate(50);//设置震动时间
                     startDrag(dragBitmap, (int)ev.getRawX(),  (int)ev.getRawY());
                     hideDropItem();
                     dragViewGroup.setVisibility(View.INVISIBLE);
                     isMoving = false;
+                    requestDisallowInterceptTouchEvent(true);
                     return true;// 消费掉此事件，onTouchEvent接收
                 }
 
@@ -311,5 +349,12 @@ public class DragListView extends ListView {
             windowManager.removeView(dragImageView);
             dragImageView = null;
         }
+    }
+
+    /** 在ScrollView内，所以要进行计算高度 */
+    @Override
+    public void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        int expandSpec = MeasureSpec.makeMeasureSpec(Integer.MAX_VALUE >> 2,MeasureSpec.AT_MOST);
+        super.onMeasure(widthMeasureSpec, expandSpec);
     }
 }

@@ -1,7 +1,6 @@
 package com.example.topnewgrid;
 
 import android.app.Activity;
-import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
@@ -11,37 +10,40 @@ import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationSet;
 import android.view.animation.TranslateAnimation;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
-import android.widget.Button;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import com.example.topnewgrid.adapter.DragAdapter;
+import com.example.topnewgrid.adapter.DragListAdapter;
 import com.example.topnewgrid.adapter.OtherAdapter;
 import com.example.topnewgrid.app.AppApplication;
 import com.example.topnewgrid.bean.ChannelItem;
 import com.example.topnewgrid.bean.ChannelManage;
-import com.example.topnewgrid.view.DragGrid;
+import com.example.topnewgrid.view.DragListView;
 import com.example.topnewgrid.view.OtherGridView;
 
 import java.util.ArrayList;
 
 /**
  * 作者：陈新明
- * 创建日期：2016/9/21
+ * 创建日期：2016/9/23
  * 邮箱：herewinner@163.com
  * 描述：//TODO
  */
 
-public class ChannelActivity extends Activity implements AdapterView.OnItemClickListener {
+public class ListDragActivity extends Activity implements AdapterView.OnItemClickListener {
+
     /** 用户栏目的GRIDVIEW */
-    private DragGrid userGridView;
+    private DragListView userGridView;
     /** 其它栏目的GRIDVIEW */
     private OtherGridView otherGridView;
     /** 用户栏目对应的适配器，可以拖动 */
-    DragAdapter userAdapter;
+    DragListAdapter userAdapter;
     /** 其它栏目对应的适配器 */
     OtherAdapter otherAdapter;
     /** 其它栏目列表 */
@@ -50,11 +52,10 @@ public class ChannelActivity extends Activity implements AdapterView.OnItemClick
     ArrayList<ChannelItem> userChannelList = new ArrayList<ChannelItem>();
     /** 是否在移动，由于这边是动画结束后才进行的数据更替，设置这个限制为了避免操作太频繁造成的数据错乱。 */
     boolean isMove = false;
-    Button enter_list;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.subscribe_activity);
+        setContentView(R.layout.listdrag_activity);
         initView();
         initData();
     }
@@ -63,27 +64,19 @@ public class ChannelActivity extends Activity implements AdapterView.OnItemClick
     private void initData() {
         userChannelList = ((ArrayList<ChannelItem>) ChannelManage.getManage(AppApplication.getApp().getSQLHelper()).getUserChannel());
         otherChannelList = ((ArrayList<ChannelItem>)ChannelManage.getManage(AppApplication.getApp().getSQLHelper()).getOtherChannel());
-        userAdapter = new DragAdapter(this, userChannelList);
+        userAdapter = new DragListAdapter(this, userChannelList);
         userGridView.setAdapter(userAdapter);
         otherAdapter = new OtherAdapter(this, otherChannelList);
         otherGridView.setAdapter(this.otherAdapter);
         //设置GRIDVIEW的ITEM的点击监听
         otherGridView.setOnItemClickListener(this);
         userGridView.setOnItemClickListener(this);
-
-        enter_list.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(ChannelActivity.this, ListDragActivity.class));
-            }
-        });
     }
 
     /** 初始化布局*/
     private void initView() {
-        userGridView = (DragGrid) findViewById(R.id.userGridView);
+        userGridView = (DragListView) findViewById(R.id.userGridView);
         otherGridView = (OtherGridView) findViewById(R.id.otherGridView);
-        enter_list = (Button) findViewById(R.id.enter_list);
     }
 
     @Override
@@ -95,15 +88,16 @@ public class ChannelActivity extends Activity implements AdapterView.OnItemClick
 
     /** GRIDVIEW对应的ITEM点击监听接口  */
     @Override
-    public void onItemClick(AdapterView<?> parent, final View view, final int position,long id) {
+    public void onItemClick(AdapterView<?> parent, final View view, final int position, long id) {
         //如果点击的时候，之前动画还没结束，那么就让点击事件无效
         if(isMove){
             return;
         }
         switch (parent.getId()) {
             case R.id.userGridView:
+
                 //position为 0，1 的不可以进行任何操作
-                if (position != 0 && position != 1) {
+                /*if (position != 0 && position != 1) {
                     final ImageView moveImageView = getView(view);
                     if (moveImageView != null) {
                         TextView newTextView = (TextView) view.findViewById(R.id.text_item);
@@ -126,7 +120,7 @@ public class ChannelActivity extends Activity implements AdapterView.OnItemClick
                             }
                         }, 50L);
                     }
-                }
+                }*/
                 break;
             case R.id.otherGridView:
                 final ImageView moveImageView = getView(view);
@@ -165,7 +159,7 @@ public class ChannelActivity extends Activity implements AdapterView.OnItemClick
      * @param clickGridView
      */
     private void MoveAnim(View moveView, int[] startLocation,int[] endLocation, final ChannelItem moveChannel,
-                          final GridView clickGridView) {
+                          final AbsListView clickGridView) {
         int[] initLocation = new int[2];
         //获取传递过来的VIEW的坐标
         moveView.getLocationInWindow(initLocation);
@@ -196,8 +190,8 @@ public class ChannelActivity extends Activity implements AdapterView.OnItemClick
             @Override
             public void onAnimationEnd(Animation animation) {
                 moveViewGroup.removeView(mMoveView);
-                // instanceof 方法判断2边实例是不是一样，判断点击的是DragGrid还是OtherGridView
-                if (clickGridView instanceof DragGrid) {
+                // instanceof 方法判断2边实例是不是一样，判断点击的是DragListView还是OtherGridView
+                if (clickGridView instanceof DragListView) {
                     otherAdapter.setVisible(true);
                     otherAdapter.notifyDataSetChanged();
                     userAdapter.remove();

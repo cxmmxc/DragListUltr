@@ -245,7 +245,7 @@ public class DragGrid extends GridView {
                     dragViewGroup.setVisibility(View.INVISIBLE);
                     isMoving = false;
                     Log.w("cxm", "dragPosition != AdapterView.INVALID_POSITION");
-//                    requestDisallowInterceptTouchEvent(true);
+                    requestDisallowInterceptTouchEvent(true);
                     return true;
                 }
                 return false;
@@ -317,6 +317,7 @@ public class DragGrid extends GridView {
     public void OnMove(int x, int y) {
         // 拖动的VIEW下方的POSTION
         int dPosition = pointToPosition(x, y);
+        Log.i("cxm", "DragGrid--dPosition=" + dPosition);
         // 判断下方的POSTION是否是最开始2个不能拖动的
         if (dPosition > 1) {
             if ((dPosition == -1) || (dPosition == dragPosition)){

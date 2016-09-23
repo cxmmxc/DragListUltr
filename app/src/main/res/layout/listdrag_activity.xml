@@ -14,6 +14,7 @@
         android:layout_height="wrap_content"
         android:text="enter_list"
         android:layout_below="@id/title_bar"
+        android:visibility="gone"
         />
 
     <ScrollView
@@ -56,19 +57,16 @@
                 android:id="@+id/seperate_line"
                 style="@style/subscribe_seperate_line" />
 
-            <com.example.topnewgrid.view.DragGrid
+            <com.example.topnewgrid.view.DragListView
                 android:id="@+id/userGridView"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="14dip"
                 android:layout_marginRight="14dip"
-                android:gravity="center"
-                android:horizontalSpacing="14dip"
+                android:divider="@android:color/black"
+                android:dividerHeight="1dp"
                 android:listSelector="@android:color/transparent"
-                android:numColumns="4"
-                android:scrollbars="vertical"
-                android:stretchMode="columnWidth"
-                android:verticalSpacing="14.0px" />
+                android:scrollbars="vertical"/>
 
             <View
                 android:id="@+id/seperate_line2"
